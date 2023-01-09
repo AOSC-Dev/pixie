@@ -3,7 +3,7 @@
 
 import logging
 
-from typing import List, Tuple, Set
+from typing import List, Set
 from pathlib import Path
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
@@ -30,31 +30,34 @@ def help_msg(version: str) -> str:
 
 def find_so(
     file: Path,
-    base: Path
-) -> Tuple[AggregatedLibraries, AggregatedLibraries]:
+    base: Path,
+    linked_only: bool = False
+) -> AggregatedLibraries:
     relative_path = file.relative_to(base)
     relative_path_str = f'[{Colors.GREEN}{relative_path}{Colors.RESET}]'
     dynamic_libs = ReadELF.read_dynamic(file)
-    external_libs = AggregatedLibraries(dynamic_libs.get_external_libraries())
+    libs = AggregatedLibraries(dynamic_libs.get_external_libraries())
     logging.info(
-        f'Found {len(external_libs)} linked external libraries ' +
+        f'Found {len(libs)} linked external libraries ' +
         relative_path_str)
-    section_libs_all = AggregatedLibraries([])
-    for section in DEFAULT_SECTIONS:
-        section_out = ReadELF.find_so(file, section)
-        section_libs = AggregatedLibraries(
-            section_out.get_external_libraries())
-        section_libs_num = len(section_libs)
-        if section_libs_num < 1:
+    if not linked_only:
+        section_libs_all = AggregatedLibraries([])
+        for section in DEFAULT_SECTIONS:
+            section_out = ReadELF.find_so(file, section)
+            section_libs = AggregatedLibraries(
+                section_out.get_external_libraries())
+            section_libs_num = len(section_libs)
+            if section_libs_num < 1:
+                logging.info(
+                    f'No reference to external library in {section} ' +
+                    relative_path_str)
+                continue
+            section_libs_all += section_libs
             logging.info(
-                f'No reference to external library in {section} ' +
-                relative_path_str)
-            continue
-        section_libs_all += section_libs
-        logging.info(
-            f'Found {len(section_libs)} possible references to ' +
-            f'external libraries {relative_path_str}')
-    return (external_libs, section_libs_all)
+                f'Found {len(section_libs)} possible references to ' +
+                f'external libraries {relative_path_str}')
+        libs += section_libs_all
+    return libs
 
 
 def search(
@@ -110,48 +113,31 @@ def main():
         formatter_class=RawDescriptionHelpFormatter)
     parser.add_argument('path')
     parser.add_argument('-p', '--to-pkgdep', action='store_true')
-    parser.add_argument('-e', '--exclude-possible', action='store_true')
+    parser.add_argument('-l', '--linked-only', action='store_true')
     args = parser.parse_args()
     target = Path(args.path)
     if not target.exists():
         logging.error('No such file or directory')
         exit(1)
-    dyn = AggregatedLibraries([])
-    pos = AggregatedLibraries([])
+    libs = AggregatedLibraries([])
     for file in find_elfs(target):
-        (dyn_libs, pos_libs) = find_so(file, target)
-        dyn += dyn_libs
-        pos += pos_libs
-    if len(dyn) + len(pos) < 1:
+        libs += find_so(file, target, args.linked_only)
+    if len(libs) < 1:
         logging.info('Nothing matched, exiting...')
         if args.to_pkgdep:
             print('PKGDEP=""')
         exit(0)
     logging.info(
-        f'Summary: {len(dyn)} libraries linked:{Colors.RESET}\n{str(dyn)}')
-    logging.info(
-        f'Summary: {len(pos)} possible references:{Colors.RESET}\n{str(pos)}')
+        f'{len(libs)} references found:{Colors.RESET}\n{str(libs)}')
     logging.info('Searching corresponding packages ...')
-    required_pkgs = search(dyn).difference(BASE_PACKAGES)
-    required_pkgs_list = list(required_pkgs)
-    required_pkgs_list.sort()
-    possible_pkgs = search(pos, ignorable=True) \
-        .difference(required_pkgs) \
-        .difference(BASE_PACKAGES)
-    possible_pkgs_list = list(possible_pkgs)
-    possible_pkgs_list.sort()
+    pkgs = search(libs).difference(BASE_PACKAGES)
+    pkgs_list = list(pkgs)
+    pkgs_list.sort()
     logging.info(
-        f'Direct dependencies:{Colors.RESET}\n' +
-        ', '.join(required_pkgs_list))
-    logging.info(
-        f'Possible dependencies:{Colors.RESET}\n' +
-        ', '.join(possible_pkgs_list))
+        f'Dependencies:{Colors.RESET}\n' +
+        ', '.join(pkgs_list))
     if args.to_pkgdep:
         logging.info('Generating PKGDEP ...')
-        if args.exclude_possible:
-            pkgs = required_pkgs
-        else:
-            pkgs = required_pkgs.union(possible_pkgs)
         print(to_pkgdep(pkgs))
 
 
