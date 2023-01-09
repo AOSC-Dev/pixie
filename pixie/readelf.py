@@ -10,6 +10,8 @@ from re import Pattern, MULTILINE, compile
 from typing import List, Optional, Any, Dict, TypeVar, Set
 from pathlib import Path
 
+from .utils import CONTENTS_REGEX_TEMPLATE
+
 # Match both rpath and sonames
 READELF_D_REGEX: Pattern[str] = compile(r"0x[0-9a-fA-F]+[ \t]+((\(RPATH\)[ \t]+Library rpath:[ \t]*\[(?P<rpath>.*)\]$)|(\(NEEDED\)[ \t]+Shared library:[ \t]+\[(?P<library>.*)\]$))", MULTILINE)  # noqa: E501
 
@@ -200,5 +202,5 @@ class AggregatedLibraries(object):
     def get_grep_filter(self) -> str:
         ret: List[str] = []
         for soname in self._libs.keys():
-            ret.append(f'(usr/lib/{soname}\\.so(\\.[0-9]+)*[ \t]+)')
+            ret.append(f'({CONTENTS_REGEX_TEMPLATE.format(soname)})')
         return '|'.join(ret)

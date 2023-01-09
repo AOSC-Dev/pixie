@@ -6,6 +6,10 @@ import readline  # type: ignore # noqa: F401
 from typing import Optional, Callable, Set
 from logging import Formatter, LogRecord, DEBUG, INFO, WARN, ERROR
 
+# For .contents and .readelf
+CONTENTS_REGEX_TEMPLATE: str = 'usr/lib/{}\\.so(\\.[0-9]+)*[ \t]+'
+
+# For to_pkgdep
 MAX_CHARS_PER_LINE: int = 80
 PKGDEP_PREFIX: str = 'PKGDEP="'
 PKGDEP_LINEBREAK: str = '\\'

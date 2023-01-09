@@ -7,6 +7,7 @@ import subprocess
 from typing import List, Set
 from pathlib import Path
 
+from .utils import CONTENTS_REGEX_TEMPLATE
 from .readelf import SharedLibrary, AggregatedLibraries
 
 DPKG_GET_ARCHITECTURE: List[str] = [
@@ -109,7 +110,7 @@ class Contents(object):
 
     @staticmethod
     def _run_grep(soname: str, contents: bytes) -> List[ContentsEntry]:
-        grep_args = GREP_REGEX + [f'usr/lib/{soname}\\.so(\\.[0-9]+)*[ \t]+']
+        grep_args = GREP_REGEX + [CONTENTS_REGEX_TEMPLATE.format(soname)]
         grep = subprocess.Popen(
             grep_args,
             stdin=subprocess.PIPE,
