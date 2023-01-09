@@ -2,11 +2,13 @@
 
 """Module for finding the corresponding package from Contents file"""
 
+import logging
 import subprocess
 
 from typing import List, Set
 from pathlib import Path
 
+from .magic import is_elf
 from .utils import CONTENTS_REGEX_TEMPLATE
 from .readelf import SharedLibrary, AggregatedLibraries
 
@@ -63,6 +65,10 @@ class Contents(object):
     _first_pass: bytes
 
     def __init__(self, libs: AggregatedLibraries):
+        prog = GREP_REGEX[0]
+        if not is_elf(Path(prog)):
+            logging.error(f'{prog} not found, exiting ...')
+            exit(1)
         self._libs = libs
         pattern = self._libs.get_grep_filter()
         self._first_pass = bytes()
@@ -80,12 +86,18 @@ class Contents(object):
 
     @staticmethod
     def _get_architecture() -> str:
+        prog = DPKG_GET_ARCHITECTURE[0]
+        if not Path(prog).exists():  # This one is a script
+            logging.error(f'{prog} not found, exiting ...')
+            exit(1)
         return subprocess.run(
             DPKG_GET_ARCHITECTURE, check=True, capture_output=True)\
-                .stdout.decode('utf-8', 'ignore').strip()
+            .stdout.decode('utf-8', 'ignore').strip()
 
     @staticmethod
     def _find_lists() -> List[Path]:
+        if not (DPKG_CONTENTS_PATH.exists() and DPKG_CONTENTS_PATH.is_dir()):
+            logging.error('Unable to find DPKG contents files, exiting ...')
         return list(DPKG_CONTENTS_PATH.rglob(
             "*_Contents-{}.*".format(Contents._get_architecture())))
 
@@ -95,7 +107,11 @@ class Contents(object):
         path: Path
     ) -> bytes:
         algorithm = path.suffix[1:]
-        cat_args = ['/usr/bin/{}cat'.format(algorithm), str(path)]
+        cat_cmd = Path(f'/usr/bin/{algorithm}cat')
+        if not is_elf(cat_cmd):
+            logging.error(f'{cat_cmd} not found, exiting ...')
+            exit(1)
+        cat_args = [str(cat_cmd), str(path)]
         cat = subprocess.Popen(
             cat_args, stdout=subprocess.PIPE)
         grep_args = GREP_REGEX + [pattern]

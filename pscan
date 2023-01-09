@@ -119,6 +119,9 @@ def main():
     if not target.exists():
         logging.error('No such file or directory')
         exit(1)
+    if not ReadELF.check_program():
+        logging.error('readelf not found, exiting ...')
+        exit(1)
     libs = AggregatedLibraries([])
     for file in find_elfs(target):
         libs += find_so(file, target, args.linked_only)

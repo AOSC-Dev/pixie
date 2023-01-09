@@ -10,6 +10,7 @@ from re import Pattern, MULTILINE, compile
 from typing import List, Optional, Any, Dict, TypeVar, Set
 from pathlib import Path
 
+from .magic import is_elf
 from .utils import CONTENTS_REGEX_TEMPLATE
 
 # Match both rpath and sonames
@@ -128,6 +129,11 @@ class SharedLibraryOutput(object):
 
 class ReadELF(object):
     DEFAULT_ARGS: List[str] = ['/usr/bin/readelf']
+
+    @staticmethod
+    def check_program() -> bool:
+        prog = ReadELF.DEFAULT_ARGS[0]
+        return is_elf(Path(prog))
 
     @staticmethod
     def _run_command(args: List[str]) -> Optional[bytes]:
