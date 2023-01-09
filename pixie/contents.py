@@ -16,6 +16,7 @@ DPKG_GET_ARCHITECTURE: List[str] = [
     '/usr/bin/dpkg-architecture', '-q', 'DEB_BUILD_ARCH']
 DPKG_CONTENTS_PATH: Path = Path('/var/lib/apt/lists/')
 GREP_REGEX: List[str] = ['/usr/bin/grep', '--color=never', '-E']
+RG_REGEX: List[str] = ['/usr/bin/rg', '--color=never', '-e']
 
 
 class ContentsEntry(object):
@@ -63,18 +64,25 @@ class ContentsEntry(object):
 class Contents(object):
     _libs: AggregatedLibraries
     _first_pass: bytes
+    _prog: List[str]
 
     def __init__(self, libs: AggregatedLibraries):
-        prog = GREP_REGEX[0]
-        if not is_elf(Path(prog)):
-            logging.error(f'{prog} not found, exiting ...')
+        rg_prog = RG_REGEX[0]
+        grep_prog = GREP_REGEX[0]
+        if is_elf(Path(rg_prog)):
+            self._prog = RG_REGEX
+        elif is_elf(Path(grep_prog)):
+            self._prog = GREP_REGEX
+        else:
+            logging.error(f'{rg_prog} and {grep_prog} not found, exiting ...')
             exit(1)
+        logging.debug(f'Using {self._prog} as grep implementation')
         self._libs = libs
         pattern = self._libs.get_grep_filter()
         self._first_pass = bytes()
         for content_list in self._find_lists():
             self._first_pass += \
-                self._run_grep_first_pass(pattern, content_list)
+                self._run_grep_first_pass(pattern, content_list, self._prog)
 
     @staticmethod
     def _generate_grep_pattern(packages: List[SharedLibrary]) -> str:
@@ -104,7 +112,8 @@ class Contents(object):
     @staticmethod
     def _run_grep_first_pass(
         pattern: str,
-        path: Path
+        path: Path,
+        prog: List[str]
     ) -> bytes:
         algorithm = path.suffix[1:]
         cat_cmd = Path(f'/usr/bin/{algorithm}cat')
@@ -114,7 +123,7 @@ class Contents(object):
         cat_args = [str(cat_cmd), str(path)]
         cat = subprocess.Popen(
             cat_args, stdout=subprocess.PIPE)
-        grep_args = GREP_REGEX + [pattern]
+        grep_args = prog + [pattern]
         grep = subprocess.Popen(
             grep_args,
             stdin=cat.stdout,
@@ -125,8 +134,12 @@ class Contents(object):
         return grep.communicate()[0]
 
     @staticmethod
-    def _run_grep(soname: str, contents: bytes) -> List[ContentsEntry]:
-        grep_args = GREP_REGEX + [CONTENTS_REGEX_TEMPLATE.format(soname)]
+    def _run_grep(
+        soname: str,
+        contents: bytes,
+        prog: List[str]
+    ) -> List[ContentsEntry]:
+        grep_args = prog + [CONTENTS_REGEX_TEMPLATE.format(soname)]
         grep = subprocess.Popen(
             grep_args,
             stdin=subprocess.PIPE,
@@ -135,7 +148,7 @@ class Contents(object):
         return list(map(lambda line: ContentsEntry(line), result.splitlines()))
 
     def run_grep(self, soname: str) -> List[ContentsEntry]:
-        return self._run_grep(soname, self._first_pass)
+        return self._run_grep(soname, self._first_pass, self._prog)
 
 
 def get_packages(entries: List[ContentsEntry]) -> Set[str]:
