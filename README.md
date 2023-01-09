@@ -1,7 +1,7 @@
 pixie
 =====
 
-Dependency scanner of ELF executables for DPKG-based Linux distributions.
+Dependency scanner for ELF executables.
 
 Requirements
 ------------

@@ -13,7 +13,7 @@ setup(
     version=f'0.1.{__version__}',
     author='RedL0tus',
     author_email='kaymw@aosc.io',
-    description='Dependency scanner of ELF executables',
+    description='Dependency scanner for ELF executables',
     license='GNU Lesser General Public License v2 (LGPLv2)',
     long_description=long_description,
     long_description_content_type='text/markdown',
