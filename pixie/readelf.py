@@ -205,6 +205,9 @@ class AggregatedLibraries(object):
     def get_inner(self) -> Dict[str, Set[str]]:
         return self._libs
 
+    def get_sonames(self) -> Set[str]:
+        return set(self._libs.keys())
+
     def get_grep_filter(self) -> str:
         ret: List[str] = []
         for soname in self._libs.keys():

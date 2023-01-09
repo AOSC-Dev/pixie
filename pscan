@@ -23,8 +23,12 @@ class PScanException(Exception):
     """Error occurred during scan"""
 
 
+def get_log_level(occ: int) -> int:
+    return (4 - min(occ, 3)) * 10
+
+
 def help_msg(version: str) -> str:
-    help_msg = '''pixie(version {}) - dependency scanner for ELF executables'''
+    help_msg = 'pixie(version 0.1.{}) - Dependency scanner for ELF executables'
     return help_msg.format(version)
 
 
@@ -82,17 +86,19 @@ def search(
         pkgs_list = list(pkgs)
         pkgs_list.sort()
         if (len(pkgs) > 1):
-            logging.warning(
-                f'Multiple packages offer {soname}:{Colors.RESET}\n' +
-                ', '.join(pkgs_list))
+            msg = f'\n{Colors.BOLD}Multiple packages offer {soname}:' +\
+                f'{Colors.RESET}\n    ' + ', '.join(pkgs_list)
             first = pkgs_list[0]
             if interactive:
+                print(msg)
                 pkg = read_line(
                     'Please choose one package',
                     default=first,
                     verify=lambda name: name in pkgs_list)
                 ret.add(pkg)
+                print()
             else:
+                logging.warning(msg)
                 ret.add(first)
         else:
             ret.add(pkgs_list[0])
@@ -100,21 +106,38 @@ def search(
 
 
 def main():
-    sh = logging.StreamHandler()
-    sh.setLevel(logging.DEBUG)
-    sh.setFormatter(ColorfulTheme())
-    logging.basicConfig(
-        encoding='utf-8',
-        handlers=[sh],
-        level=logging.INFO)
     parser = ArgumentParser(
         prog='pscan',
         description=help_msg(__version__),
         formatter_class=RawDescriptionHelpFormatter)
-    parser.add_argument('path')
-    parser.add_argument('-p', '--to-pkgdep', action='store_true')
-    parser.add_argument('-l', '--linked-only', action='store_true')
+    parser.add_argument(
+        'path',
+        help='Path to the target, could be a directory or a file')
+    parser.add_argument(
+        '-l', '--linked-only',
+        action='store_true', help='Show linked dependencies only')
+    parser.add_argument(
+        '-s', '--soname-only',
+        action='store_true',
+        help='Print sonames only, defaults to generating PKGDEP')
+    parser.add_argument(
+        '-v', '--verbose', action='count',
+        help='Verbosity of the output')
+    parser.add_argument(
+        '-i', '--interactive', action='store_true',
+        help='Interactively choose when multiple packages offer same library')
     args = parser.parse_args()
+    # Verbosity
+    log_level = get_log_level(args.verbose or 0)
+    sh = logging.StreamHandler()
+    sh.setLevel(log_level)
+    sh.setFormatter(ColorfulTheme())
+    logging.basicConfig(
+        encoding='utf-8',
+        handlers=[sh],
+        level=log_level)
+    # Interactive
+    interactive = (args.interactive or False)
     target = Path(args.path)
     if not target.exists():
         logging.error('No such file or directory')
@@ -125,6 +148,13 @@ def main():
     libs = AggregatedLibraries([])
     for file in find_elfs(target):
         libs += find_so(file, target, args.linked_only)
+    # Handle --soname-only
+    if args.soname_only:
+        logging.info('All referenced sonames:')
+        sonames = list(libs.get_sonames())
+        sonames.sort()
+        print(' '.join(sonames))
+        exit(0)
     if len(libs) < 1:
         logging.info('Nothing matched, exiting...')
         if args.to_pkgdep:
@@ -133,15 +163,14 @@ def main():
     logging.info(
         f'{len(libs)} references found:{Colors.RESET}\n{str(libs)}')
     logging.info('Searching corresponding packages ...')
-    pkgs = search(libs).difference(BASE_PACKAGES)
+    pkgs = search(libs, interactive=interactive).difference(BASE_PACKAGES)
     pkgs_list = list(pkgs)
     pkgs_list.sort()
     logging.info(
         f'Dependencies:{Colors.RESET}\n' +
         ', '.join(pkgs_list))
-    if args.to_pkgdep:
-        logging.info('Generating PKGDEP ...')
-        print(to_pkgdep(pkgs))
+    logging.info('Generating PKGDEP ...')
+    print(to_pkgdep(pkgs))
 
 
 if __name__ == '__main__':
