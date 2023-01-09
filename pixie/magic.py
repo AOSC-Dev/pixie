@@ -8,7 +8,7 @@ ELF_MAGIC: bytes = b'\x7fELF'
 
 
 def is_elf(path: Path) -> bool:
-    if path.is_dir():
+    if not (path.exists() and path.is_file()):
         return False
     magic: bytes = bytes()
     with open(path, 'rb') as f:
