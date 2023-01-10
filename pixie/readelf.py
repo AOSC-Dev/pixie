@@ -14,7 +14,7 @@ from .magic import is_elf
 from .utils import CONTENTS_REGEX_TEMPLATE
 
 # Match both rpath and sonames
-READELF_D_REGEX: Pattern[str] = compile(r"0x[0-9a-fA-F]+[ \t]+((\(RPATH\)[ \t]+Library rpath:[ \t]*\[(?P<rpath>.*)\]$)|(\(NEEDED\)[ \t]+Shared library:[ \t]+\[(?P<library>.*)\]$))", MULTILINE)  # noqa: E501
+READELF_D_REGEX: Pattern[str] = compile(r"0x[0-9a-fA-F]+[ \t]+((\(((RPATH)|(RUNPATH))\)[ \t]+Library ((rpath)|(runpath)):[ \t]*\[(?P<rpath>.*)\]$)|(\(NEEDED\)[ \t]+Shared library:[ \t]+\[(?P<library>.*)\]$))", MULTILINE)  # noqa: E501
 
 # Match sonames in dumped strings
 READELF_P_REGEX: Pattern[str] = compile(r"  \[[ \t]*[0-9a-fA-F]+\]  (?P<soname>lib[a-zA-Z0-9-_]+.so(.[0-9]+)*)", MULTILINE)  # noqa: E501
@@ -66,24 +66,25 @@ class SharedLibrary(object):
             return False
         return other._soname == self._soname
 
-    def is_external(self, rpath: Path) -> bool:
-        return not (rpath / self.get_full_name()).exists()
+    def is_external(self, rpath: List[Path]) -> bool:
+        name = self.get_full_name()
+        return not any(map(lambda p: (p / name).exists(), rpath))
 
 
 class SharedLibraryOutput(object):
     _libraries: List[SharedLibrary]
     _origin_path: Path
-    _rpath: Path
+    _rpath: List[Path]
 
     def __init__(
         self,
         origin_path: Path,
-        rpath: Optional[Path] = None,
+        rpath: Optional[List[Path]] = None,
         libraries: Optional[List[SharedLibrary]] = []
     ):
         self._libraries = libraries or []
         self._origin_path = origin_path
-        self._rpath = rpath or self._origin_path  # Defaults to $ORIGIN
+        self._rpath = rpath or [self._origin_path]  # Defaults to $ORIGIN
 
     def __repr__(self) -> str:
         return "SharedLibraryOutput({}, rpath={}, libraries={})".format(
@@ -92,8 +93,9 @@ class SharedLibraryOutput(object):
             repr(self._libraries)
         )
 
-    def parse_rpath(self, input: str) -> Path:
-        return Path(input.replace('$ORIGIN', str(self._origin_path)))
+    def parse_rpath(self, input: str) -> List[Path]:
+        replaced = input.replace('$ORIGIN', str(self._origin_path))
+        return list(map(lambda p: Path(p), replaced.split(':')))
 
     def parse_bytes_dynamic(self, output: Optional[bytes]):
         if output is None:
