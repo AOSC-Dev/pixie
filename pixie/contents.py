@@ -9,7 +9,7 @@ from typing import List, Set
 from pathlib import Path
 
 from .magic import is_elf
-from .utils import CONTENTS_REGEX_TEMPLATE
+from .utils import generate_pattern
 from .readelf import SharedLibrary, AggregatedLibraries
 
 DPKG_GET_ARCHITECTURE: List[str] = [
@@ -139,7 +139,7 @@ class Contents(object):
         contents: bytes,
         prog: List[str]
     ) -> List[ContentsEntry]:
-        grep_args = prog + [CONTENTS_REGEX_TEMPLATE.format(soname)]
+        grep_args = prog + [generate_pattern(soname)]
         grep = subprocess.Popen(
             grep_args,
             stdin=subprocess.PIPE,

@@ -11,7 +11,7 @@ from typing import List, Optional, Any, Dict, TypeVar, Set
 from pathlib import Path
 
 from .magic import is_elf
-from .utils import CONTENTS_REGEX_TEMPLATE
+from .utils import generate_pattern
 
 # Match both rpath and sonames
 READELF_D_REGEX: Pattern[str] = compile(r"0x[0-9a-fA-F]+[ \t]+((\(((RPATH)|(RUNPATH))\)[ \t]+Library ((rpath)|(runpath)):[ \t]*\[(?P<rpath>.*)\]$)|(\(NEEDED\)[ \t]+Shared library:[ \t]+\[(?P<library>.*)\]$))", MULTILINE)  # noqa: E501
@@ -213,5 +213,5 @@ class AggregatedLibraries(object):
     def get_grep_filter(self) -> str:
         ret: List[str] = []
         for soname in self._libs.keys():
-            ret.append(f'({CONTENTS_REGEX_TEMPLATE.format(soname)})')
+            ret.append(f'({generate_pattern(soname)})')
         return '|'.join(ret)

@@ -3,6 +3,7 @@
 # This modifies the behavior of input() without any direct invocation
 import readline  # type: ignore # noqa: F401
 
+from re import escape
 from typing import Optional, Callable, Set
 from logging import Formatter, LogRecord, DEBUG, INFO, WARN, ERROR
 
@@ -101,3 +102,7 @@ def to_pkgdep(packages: Set[str]) -> str:
         line_len = pkg_len
         ret += line_pre + pkg
     return ret[:-1] + PKGDEP_SUFFIX
+
+
+def generate_pattern(soname: str) -> str:
+    return CONTENTS_REGEX_TEMPLATE.format(escape(soname))
