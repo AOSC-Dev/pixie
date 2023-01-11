@@ -157,8 +157,7 @@ def main():
         exit(0)
     if len(libs) < 1:
         logging.info('Nothing matched, exiting...')
-        if args.to_pkgdep:
-            print('PKGDEP=""')
+        print('PKGDEP=""')
         exit(0)
     logging.info(
         f'{len(libs)} references found:{Colors.RESET}\n{str(libs)}')
