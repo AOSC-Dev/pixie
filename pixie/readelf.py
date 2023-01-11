@@ -17,7 +17,7 @@ from .utils import generate_pattern
 READELF_D_REGEX: Pattern[str] = compile(r"0x[0-9a-fA-F]+[ \t]+((\(((RPATH)|(RUNPATH))\)[ \t]+Library ((rpath)|(runpath)):[ \t]*\[(?P<rpath>.*)\]$)|(\(NEEDED\)[ \t]+Shared library:[ \t]+\[(?P<library>.*)\]$))", MULTILINE)  # noqa: E501
 
 # Match sonames in dumped strings
-READELF_P_REGEX: Pattern[str] = compile(r"  \[[ \t]*[0-9a-fA-F]+\]  (?P<soname>lib[a-zA-Z0-9-_]+.so(.[0-9]+)*)", MULTILINE)  # noqa: E501
+READELF_P_REGEX: Pattern[str] = compile(r"(?P<soname>lib[a-zA-Z0-9-_]+.so(.[0-9]+)*)", MULTILINE)  # noqa: E501
 
 
 class ReadELFException(Exception):
