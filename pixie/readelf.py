@@ -4,6 +4,7 @@
 Readelf binding
 """
 
+import logging
 import subprocess
 
 from re import Pattern, MULTILINE, compile
@@ -39,7 +40,11 @@ class SharedLibrary(object):
         # Parse sover
         if len(segments) == 2:
             sover = segments[1].split('.')
-            self._sover = list(map(lambda ver: int(ver), sover))
+            try:
+                self._sover = list(map(lambda ver: int(ver), sover))
+            except ValueError as e:
+                logging.debug(f'Failed to parse the sover of {name}: {e}')
+                self._sover = []
         else:
             self._sover = []
 
