@@ -14,6 +14,11 @@ from pathlib import Path
 from .magic import is_elf
 from .utils import generate_pattern
 
+# Max length of paths
+MAX_PATH_LEN: int = 4096
+# Max length of filenames
+MAX_FILENAME_LEN: int = 255
+
 # Match both rpath and sonames
 READELF_D_REGEX: Pattern[str] = compile(r"0x[0-9a-fA-F]+[ \t]+((\(((RPATH)|(RUNPATH))\)[ \t]+Library ((rpath)|(runpath)):[ \t]*\[(?P<rpath>.*)\]$)|(\(NEEDED\)[ \t]+Shared library:[ \t]+\[(?P<library>.*)\]$))", MULTILINE)  # noqa: E501
 
@@ -110,11 +115,11 @@ class SharedLibraryOutput(object):
             groups = match.groupdict()
             # Update rpath
             rpath = groups.get('rpath')
-            if isinstance(rpath, str):
+            if isinstance(rpath, str) and (len(rpath) < MAX_PATH_LEN):
                 self._rpath += self.parse_rpath(rpath)
             # Update libraries
             library = groups.get('library')
-            if isinstance(library, str):
+            if isinstance(library, str) and (len(library) < MAX_FILENAME_LEN):
                 self._libraries.append(SharedLibrary(library))
 
     def parse_bytes_string_dump(self, output: Optional[bytes]):
@@ -123,7 +128,7 @@ class SharedLibraryOutput(object):
         matches = READELF_P_REGEX.finditer(output.decode('utf-8', 'ignore'))
         for match in matches:
             lib = match.groupdict().get('soname')
-            if isinstance(lib, str):
+            if isinstance(lib, str) and (len(lib) < MAX_FILENAME_LEN):
                 self._libraries.append(SharedLibrary(lib))
 
     def get_libraries(self) -> List[SharedLibrary]:
