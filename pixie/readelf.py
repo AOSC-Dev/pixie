@@ -106,7 +106,7 @@ class SharedLibraryOutput(object):
             # Update rpath
             rpath = groups.get('rpath')
             if isinstance(rpath, str):
-                self._rpath = self.parse_rpath(rpath)
+                self._rpath += self.parse_rpath(rpath)
             # Update libraries
             library = groups.get('library')
             if isinstance(library, str):
