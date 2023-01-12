@@ -3,8 +3,7 @@
 # This modifies the behavior of input() without any direct invocation
 import readline  # type: ignore # noqa: F401
 
-from re import escape
-from typing import Optional, Callable, Set
+from typing import Optional, Callable, Set, List
 from logging import Formatter, LogRecord, DEBUG, INFO, WARN, ERROR
 
 # For .contents and .readelf
@@ -16,6 +15,9 @@ PKGDEP_PREFIX: str = 'PKGDEP="'
 PKGDEP_LINEBREAK: str = '\\'
 PKGDEP_SEPARATOR: str = ' '
 PKGDEP_SUFFIX: str = '"'
+
+# Character that requires to be escaped in regex
+GREP_ESCAPE: List[str] = ['\\', '+', '$', '*', '.', '[', ']', '-']
 
 
 class Colors(object):
@@ -104,5 +106,12 @@ def to_pkgdep(packages: Set[str]) -> str:
     return ret[:-1] + PKGDEP_SUFFIX
 
 
-def generate_pattern(soname: str) -> str:
-    return CONTENTS_REGEX_TEMPLATE.format(escape(soname))
+def grep_escape(soname: str) -> str:
+    ret = soname
+    for char in GREP_ESCAPE:
+        ret.replace(char, f'\\{char}')
+    return ret
+
+
+def generate_pattern(soname: str, grep: bool = False) -> str:
+    return CONTENTS_REGEX_TEMPLATE.format(grep_escape(soname))
