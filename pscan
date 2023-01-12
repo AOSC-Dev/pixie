@@ -86,11 +86,11 @@ def search(
         pkgs_list = list(pkgs)
         pkgs_list.sort()
         if (len(pkgs) > 1):
-            msg = f'\n{Colors.BOLD}Multiple packages offer {soname}:' +\
+            msg = f'{Colors.BOLD}Multiple packages offer {soname}:' +\
                 f'{Colors.RESET}\n    ' + ', '.join(pkgs_list)
             first = pkgs_list[0]
             if interactive:
-                print(msg)
+                print('\n' + msg)
                 pkg = read_line(
                     'Please choose one package',
                     default=first,
