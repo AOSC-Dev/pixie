@@ -25,6 +25,9 @@ READELF_D_REGEX: Pattern[str] = compile(r"0x[0-9a-fA-F]+[ \t]+((\(((RPATH)|(RUNP
 # Match sonames in dumped strings
 READELF_P_REGEX: Pattern[str] = compile(r"(?P<soname>lib[a-zA-Z0-9-_]+.so(.[0-9]+)*)", MULTILINE)  # noqa: E501
 
+# Match dlopen in readelf -s
+READELF_S_REGEX: Pattern[str] = compile(r"UND[ \t]+dlopen", MULTILINE)
+
 
 class ReadELFException(Exception):
     """Raised when readelf give no output or the return code is not 0"""
@@ -166,7 +169,20 @@ class ReadELF(object):
     @staticmethod
     def find_so(file: Path, section: str) -> SharedLibraryOutput:
         ret = SharedLibraryOutput(file.parent)
-        output = ReadELF._run_command(['-p', section, str(file)])
+        filename = str(file)
+        # Makesure the file contains dlopen in its symbol table
+        syms = ReadELF._run_command(['-s', filename])
+        if syms is None:
+            logging.debug(
+                f'Failed to get symbols from {filename}, ignoring ...')
+            return ret
+        if READELF_S_REGEX.search(syms.decode('utf-8', 'ignore')) is None:
+            logging.debug(
+                f'{filename} does not contain dlopen in its symbols ' +
+                'ignoring ...')
+            return ret
+        # Read ELF
+        output = ReadELF._run_command(['-p', section, filename])
         ret.parse_bytes_string_dump(output)
         return ret
 
