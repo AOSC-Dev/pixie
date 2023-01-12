@@ -25,5 +25,8 @@ def find_elfs(path: Path) -> Iterable[Path]:
         dir = Path(root)
         for file in files:
             path = dir / file
-            if is_elf(path):
-                yield path
+            try:
+                if is_elf(path):
+                    yield path
+            except (IOError, PermissionError):
+                continue
