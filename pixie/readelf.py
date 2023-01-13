@@ -8,7 +8,7 @@ import logging
 import subprocess
 
 from re import Pattern, MULTILINE, compile
-from typing import List, Optional, Any, Dict, TypeVar, Set
+from typing import List, Optional, Any, Dict, TypeVar, Set, Iterator
 from pathlib import Path
 
 from .magic import is_elf
@@ -236,8 +236,16 @@ class AggregatedLibraries(object):
     def get_sonames(self) -> Set[str]:
         return set(self._libs.keys())
 
+    def iter(self) -> Iterator[str]:
+        for (soname, sovers) in self._libs.items():
+            if len(sovers) < 1:
+                yield f'{soname}.so'
+                continue
+            for sover in sovers:
+                yield f'{soname}.so.{sover}'
+
     def get_grep_filter(self) -> str:
         ret: List[str] = []
-        for soname in self._libs.keys():
+        for soname in self.iter():
             ret.append(f'({generate_pattern(soname)})')
         return '|'.join(ret)

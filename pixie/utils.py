@@ -7,7 +7,7 @@ from typing import Optional, Callable, Set, List
 from logging import Formatter, LogRecord, DEBUG, INFO, WARN, ERROR
 
 # For .contents and .readelf
-CONTENTS_REGEX_TEMPLATE: str = 'usr/lib/{}\\.so(\\.[0-9]+)*[ \t]+'
+CONTENTS_REGEX_TEMPLATE: str = 'usr/lib/{}(\\.[0-9]+)*[ \t]+'
 
 # For to_pkgdep
 MAX_CHARS_PER_LINE: int = 80

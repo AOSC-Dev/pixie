@@ -69,11 +69,9 @@ def search(
     ignorable: bool = True,
     interactive: bool = True
 ) -> Set[str]:
-    libs_dict = libs.get_inner()
     ret: Set[str] = set()
     contents = Contents(libs)
-    # TODO: Implement sover matching
-    for soname in libs_dict.keys():
+    for soname in libs.iter():
         pkgs = get_packages(contents.run_grep(soname))
         if (len(pkgs) < 1):
             msg = f'No package provides {soname}'
