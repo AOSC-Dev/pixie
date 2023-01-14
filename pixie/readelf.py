@@ -11,7 +11,7 @@ from re import Pattern, MULTILINE, compile
 from typing import List, Optional, Any, Dict, TypeVar, Set, Iterator
 from pathlib import Path
 
-from .magic import is_elf
+from .magic import FileInfo
 from .utils import generate_pattern
 
 # Max length of paths
@@ -148,7 +148,7 @@ class ReadELF(object):
     @staticmethod
     def check_program() -> bool:
         prog = ReadELF.DEFAULT_ARGS[0]
-        return is_elf(Path(prog))
+        return FileInfo.is_elf(Path(prog))
 
     @staticmethod
     def _run_command(args: List[str]) -> Optional[bytes]:

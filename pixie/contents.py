@@ -8,7 +8,7 @@ import subprocess
 from typing import List, Set
 from pathlib import Path
 
-from .magic import is_elf
+from .magic import FileInfo
 from .utils import generate_pattern
 from .readelf import SharedLibrary, AggregatedLibraries
 
@@ -69,9 +69,9 @@ class Contents(object):
     def __init__(self, libs: AggregatedLibraries):
         rg_prog = RG_REGEX[0]
         grep_prog = GREP_REGEX[0]
-        if is_elf(Path(rg_prog)):
+        if FileInfo.is_elf(Path(rg_prog)):
             self._prog = RG_REGEX
-        elif is_elf(Path(grep_prog)):
+        elif FileInfo.is_elf(Path(grep_prog)):
             self._prog = GREP_REGEX
         else:
             logging.error(f'{rg_prog} and {grep_prog} not found, exiting ...')
@@ -117,7 +117,7 @@ class Contents(object):
     ) -> bytes:
         algorithm = path.suffix[1:]
         cat_cmd = Path(f'/usr/bin/{algorithm}cat')
-        if not is_elf(cat_cmd):
+        if not FileInfo.is_elf(cat_cmd):
             logging.error(f'{cat_cmd} not found, exiting ...')
             exit(1)
         cat_args = [str(cat_cmd), str(path)]
